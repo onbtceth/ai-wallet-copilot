@@ -350,7 +350,11 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 
 <script>
 // ========== Config ==========
-const RPC_URL = 'https://rpc.ankr.com/eth';
+const RPC_URLS = [
+  'https://ethereum-rpc.publicnode.com',
+  'https://mainnet.gateway.tenderly.co',
+  'https://rpc.ankr.com/eth',
+];
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"type":"function"}];
 
@@ -368,6 +372,26 @@ let provider = null;
 let currentAddress = null;
 let tokenPrices = {};
 let tokenBalances = {};
+let rpcIndex = 0;
+
+// Retry helper: auto-switch RPC on failure
+async function withProvider(fn, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      if (!provider) await initProvider();
+      return await fn(provider);
+    } catch(e) {
+      console.warn(`RPC call failed (attempt ${i+1}):`, e.message);
+      if (i < retries) {
+        rpcIndex = (rpcIndex + 1) % RPC_URLS.length;
+        console.log('Switching to RPC:', RPC_URLS[rpcIndex]);
+        provider = new ethers.providers.JsonRpcProvider(RPC_URLS[rpcIndex]);
+      } else {
+        throw e;
+      }
+    }
+  }
+}
 
 // ========== Init ==========
 setTimeout(async () => {
@@ -379,19 +403,24 @@ setTimeout(async () => {
 }, 2200);
 
 async function initProvider() {
-  try {
-    provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const network = await provider.getNetwork();
-    document.getElementById('statusLabel').textContent = '● Ethereum Mainnet';
-    document.getElementById('statusLabel').classList.remove('offline');
-    document.getElementById('networkBadge').textContent = '🔗 Ethereum Mainnet';
-    console.log('Connected to Ethereum:', network.name);
-  } catch(e) {
-    console.error('RPC connect failed:', e);
-    document.getElementById('statusLabel').textContent = '● 连接失败';
-    document.getElementById('statusLabel').classList.add('offline');
-    document.getElementById('networkBadge').textContent = '⚠️ 连接失败';
+  for (const url of RPC_URLS) {
+    try {
+      const p = new ethers.providers.JsonRpcProvider(url);
+      const network = await p.getNetwork();
+      provider = p;
+      document.getElementById('statusLabel').textContent = '● Ethereum Mainnet';
+      document.getElementById('statusLabel').classList.remove('offline');
+      document.getElementById('networkBadge').textContent = '🔗 Ethereum Mainnet';
+      console.log('Connected via:', url, network.name);
+      return;
+    } catch(e) {
+      console.warn('RPC failed:', url, e.message);
+    }
   }
+  console.error('All RPCs failed');
+  document.getElementById('statusLabel').textContent = '● 连接失败';
+  document.getElementById('statusLabel').classList.add('offline');
+  document.getElementById('networkBadge').textContent = '⚠️ 连接失败';
 }
 
 // ========== Address Connection ==========
@@ -406,9 +435,9 @@ async function connectAddress() {
   if (addr.endsWith('.eth')) {
     showToast('🔄 解析 ENS...');
     try {
-      const resolved = await provider.resolveName(addr);
+      const resolved = await withProvider(p => p.resolveName(addr));
       if (resolved) { addr = resolved; showToast('✅ ENS 解析成功'); }
-    } catch(e) { showToast('❌ ENS 解析失败'); return; }
+    } catch(e) { showToast('❌ ENS 解析失败: ' + e.message?.slice(0,60)); return; }
   }
 
   if (!ethers.utils.isAddress(addr)) { showToast('❌ 无效的以太坊地址'); return; }
@@ -431,20 +460,20 @@ async function loadChainData() {
   if (!currentAddress || !provider) return;
   try {
     // 1. ETH balance
-    const ethBal = await provider.getBalance(currentAddress);
+    const ethBal = await withProvider(p => p.getBalance(currentAddress));
     const ethBalFormatted = parseFloat(ethers.utils.formatEther(ethBal));
     tokenBalances['ETH'] = ethBalFormatted;
 
     // 2. ERC20 balances
     for (const token of KNOWN_ERC20) {
       try {
-        const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-        const [rawBal, decimals] = await Promise.all([
-          contract.balanceOf(currentAddress),
-          contract.decimals()
-        ]);
-        const bal = parseFloat(ethers.utils.formatUnits(rawBal, decimals));
-        if (bal > 0) tokenBalances[token.symbol] = bal;
+        const bal = await withProvider(async (p) => {
+          const contract = new ethers.Contract(token.address, ERC20_ABI, p);
+          const [rawBal, decimals] = await Promise.all([contract.balanceOf(currentAddress), contract.decimals()]);
+          return { rawBal, decimals };
+        });
+        const b = parseFloat(ethers.utils.formatUnits(bal.rawBal, bal.decimals));
+        if (b > 0) tokenBalances[token.symbol] = b;
       } catch(e) { /* skip failed tokens */ }
     }
 
@@ -603,7 +632,7 @@ async function processAiCommand(msg) {
   try {
     // Gas query
     if (lower.includes('gas')) {
-      const feeData = await provider.getFeeData();
+      const feeData = await withProvider(p => p.getFeeData());
       const baseGwei = ethers.utils.formatUnits(feeData.gasPrice || 0, 'gwei');
       const priorityGwei = feeData.maxPriorityFeePerGas ? ethers.utils.formatUnits(feeData.maxPriorityFeePerGas, 'gwei') : '0';
       const gweiNum = parseFloat(baseGwei).toFixed(1);
@@ -646,8 +675,8 @@ async function processAiCommand(msg) {
 
     // Block number
     if (lower.includes('区块') || lower.includes('block')) {
-      const blockNum = await provider.getBlockNumber();
-      const block = await provider.getBlock(blockNum);
+      const blockNum = await withProvider(p => p.getBlockNumber());
+      const block = await withProvider(p => p.getBlock(blockNum));
       removeTyping();
       addMessage('ai', `📦 链上最新区块信息：<div class="ai-action-card">
         <h5>⛓️ Block #${blockNum.toLocaleString()}</h5>
@@ -668,8 +697,8 @@ async function processAiCommand(msg) {
       if (match) {
         const [, amount, to] = match;
         const from = currentAddress || '0x0000000000000000000000000000000000000000';
-        const feeData = await provider.getFeeData();
-        const nonce = await provider.getTransactionCount(from);
+        const feeData = await withProvider(p => p.getFeeData());
+        const nonce = await withProvider(p => p.getTransactionCount(from));
         const txReq = {
           to: to,
           value: ethers.utils.parseEther(amount),
@@ -720,9 +749,12 @@ async function processAiCommand(msg) {
       const tokenInfo = KNOWN_ERC20.find(t => t.symbol === targetSym);
       if (!tokenInfo) { removeTyping(); addMessage('ai','❌ 不支持的代币'); return; }
 
-      const contract = new ethers.Contract(tokenInfo.address, ERC20_ABI, provider);
-      const [rawBal, decimals] = await Promise.all([contract.balanceOf(currentAddress), contract.decimals()]);
-      const bal = ethers.utils.formatUnits(rawBal, decimals);
+      const contractInfo = await withProvider(async (p) => {
+        const contract = new ethers.Contract(tokenInfo.address, ERC20_ABI, p);
+        const [rawBal, decimals] = await Promise.all([contract.balanceOf(currentAddress), contract.decimals()]);
+        return { rawBal, decimals };
+      });
+      const bal = ethers.utils.formatUnits(contractInfo.rawBal, contractInfo.decimals);
       const price = tokenPrices[targetSym]?.usd || 0;
       const usdVal = (parseFloat(bal) * price).toFixed(2);
 
@@ -733,7 +765,7 @@ async function processAiCommand(msg) {
         <div class="ai-action-row"><span class="label">余额</span><span class="value">${parseFloat(bal).toLocaleString()} ${targetSym}</span></div>
         <div class="ai-action-row"><span class="label">≈ USD</span><span class="value" style="color:var(--accent);">$${usdVal}</span></div>
         <div class="ai-action-row"><span class="label">合约</span><span class="value" style="font-size:10px;">${shortAddr(tokenInfo.address)}</span></div>
-        <div class="ai-action-row"><span class="label">Decimals</span><span class="value">${decimals}</span></div>
+        <div class="ai-action-row"><span class="label">Decimals</span><span class="value">${contractInfo.decimals}</span></div>
         <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：Ethereum Mainnet RPC 链上查询</p>
       </div>`);
       return;
@@ -744,7 +776,7 @@ async function processAiCommand(msg) {
       const ensMatch = msg.match(/([\w-]+\.eth)/i);
       if (ensMatch) {
         const ensName = ensMatch[1];
-        const resolved = await provider.resolveName(ensName);
+        const resolved = await withProvider(p => p.resolveName(ensName));
         removeTyping();
         if (resolved) {
           addMessage('ai', `🏷️ ENS 解析结果：<div class="ai-action-card">
@@ -799,7 +831,7 @@ async function processAiCommand(msg) {
     // ETH balance specific
     if (lower.includes('eth') && (lower.includes('余额') || lower.includes('balance'))) {
       if (!currentAddress) { removeTyping(); addMessage('ai','❌ 请先连接以太坊地址（点击右上角 🔗）'); return; }
-      const bal = await provider.getBalance(currentAddress);
+      const bal = await withProvider(p => p.getBalance(currentAddress));
       const ethBal = ethers.utils.formatEther(bal);
       const price = tokenPrices['ETH']?.usd || 0;
       removeTyping();
