@@ -5,7 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AI Wallet Copilot — 智能钱包助手 | imToken 10周年共创</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+<!-- 多 CDN 故障转移加载 ethers.js -->
+<script>
+(function(){
+  var cdns = [
+    'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
+    'https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js'
+  ];
+  var i=0;
+  function load(){
+    if(typeof ethers!=='undefined'){window.__ethersReady=true;return;}
+    if(i>=cdns.length){console.error('All ethers CDN failed');return;}
+    var s=document.createElement('script');
+    s.src=cdns[i]; s.crossOrigin='anonymous';
+    s.onload=function(){if(typeof ethers!=='undefined'){window.__ethersReady=true;console.log('ethers loaded from:',cdns[i]);}else{i++;load();}};
+    s.onerror=function(){i++;load();};
+    document.head.appendChild(s);
+  }
+  load();
+})();
+</script>
 <style>
 :root {
   --primary: #1C64F2; --primary-light: #3B82F6; --primary-dark: #1E40AF;
@@ -118,12 +138,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 .ai-action-btn.confirm:hover { background:var(--accent-light); }
 .ai-action-btn.cancel { background:var(--bg-input); color:var(--text); }
 .ai-action-btn.cancel:hover { background:var(--border); }
-.risk-card { margin-top:10px; padding:14px; border-radius:var(--radius-sm); border-left:4px solid; }
-.risk-card.safe { background:rgba(16,185,129,0.1); border-color:var(--accent); }
-.risk-card.warning { background:rgba(245,158,11,0.1); border-color:var(--warning); }
-.risk-card.danger { background:rgba(239,68,68,0.1); border-color:var(--danger); }
-.risk-card h5 { font-size:13px; font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-.risk-card p { font-size:12px; color:var(--text-secondary); line-height:1.5; }
 .chat-input-area { padding:12px 0 4px; border-top:1px solid var(--border); }
 .chat-input-wrap { display:flex; gap:8px; align-items:flex-end; }
 .chat-input { flex:1; padding:12px 16px; background:var(--bg-card); border:1px solid var(--border); border-radius:24px; color:var(--text); font-size:14px; outline:none; resize:none; min-height:44px; max-height:120px; transition:var(--transition); }
@@ -174,13 +188,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 .gas-item .speed { font-size:11px; color:var(--text-muted); }
 .gas-item .gwei { font-size:18px; font-weight:700; margin:4px 0; }
 .gas-item .time { font-size:11px; color:var(--accent); }
-.chart-container { margin:16px 0; }
-.mini-chart { height:120px; position:relative; overflow:hidden; border-radius:var(--radius-sm); }
-.chart-line { fill:none; stroke:var(--accent); stroke-width:2; }
-.chart-area { fill:url(#chartGradient); opacity:0.3; }
-.chart-periods { display:flex; gap:4px; margin-top:8px; }
-.chart-period { flex:1; padding:6px; text-align:center; border-radius:var(--radius-xs); font-size:12px; background:var(--bg-card); border:1px solid var(--border); cursor:pointer; transition:var(--transition); font-weight:500; color:var(--text-muted); }
-.chart-period.active { background:var(--primary); color:#FFF; border-color:var(--primary); }
 .toast { position:fixed; top:60px; left:50%; transform:translateX(-50%); padding:12px 24px; border-radius:12px; background:var(--accent); color:#FFF; font-size:14px; font-weight:600; z-index:300; opacity:0; transition:opacity .3s; box-shadow:0 4px 20px rgba(16,185,129,0.4); max-width:380px; text-align:center; }
 .toast.show { opacity:1; }
 .typing { display:flex; gap:4px; padding:8px 0; }
@@ -193,8 +200,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 .addr-btn { padding:12px 20px; border-radius:var(--radius-sm); background:var(--primary); color:#FFF; border:none; font-weight:600; font-size:13px; cursor:pointer; transition:var(--transition); white-space:nowrap; }
 .addr-btn:hover { background:var(--primary-light); }
 .tx-hex-box { margin-top:8px; padding:10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-xs); font-family:monospace; font-size:11px; word-break:break-all; color:var(--text-secondary); max-height:80px; overflow-y:auto; }
-.loading-dots::after { content:''; animation:dots 1.5s steps(3) infinite; }
-@keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
 @media(max-width:430px) { .app{max-width:100%} .balance-amount{font-size:28px} }
 </style>
 </head>
@@ -213,7 +218,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
       <div class="header-avatar">🤖</div>
       <div>
         <div class="header-title">AI Wallet Copilot</div>
-        <div class="header-subtitle" id="statusLabel">● 链上连接中...</div>
+        <div class="header-subtitle" id="statusLabel">● 加载中...</div>
       </div>
     </div>
     <div class="header-right">
@@ -224,14 +229,14 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 
   <section class="page active" id="page-wallet">
     <div class="balance-card">
-      <div class="balance-label">总资产估值 <span class="chain-badge" id="networkBadge">⏳ 连接中</span></div>
+      <div class="balance-label">总资产估值 <span class="chain-badge" id="networkBadge">⏳ 加载中</span></div>
       <div class="balance-amount" id="totalBalance">$ —</div>
       <div class="balance-change" id="balanceChange">输入地址查看链上资产</div>
       <div class="balance-actions">
-        <button class="balance-action" onclick="navigateTo('ai');setInput('转 0.01 ETH 给 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')">↗️ 转账</button>
-        <button class="balance-action" onclick="navigateTo('ai');setInput('帮我兑换 100 USDT 为 ETH')">🔄 兑换</button>
-        <button class="balance-action" onclick="navigateTo('ai');setInput('分析我的持仓风险')">📊 分析</button>
         <button class="balance-action" onclick="navigateTo('ai');setInput('查询 Gas 费用')">⛽ Gas</button>
+        <button class="balance-action" onclick="navigateTo('ai');setInput('查询 ETH 价格')">💰 价格</button>
+        <button class="balance-action" onclick="navigateTo('ai');setInput('分析我的持仓')">📊 分析</button>
+        <button class="balance-action" onclick="navigateTo('ai');setInput('查询区块高度')">📦 区块</button>
       </div>
     </div>
 
@@ -245,7 +250,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
       <div class="ai-banner-arrow">›</div>
     </div>
 
-    <div class="section-title">代币资产 <span class="more" onclick="showToast('💡 点击 AI 助手可深入分析任意代币')">全部</span></div>
+    <div class="section-title">代币资产 <span class="more" onclick="showToast('💡 点击 AI 助手可深入分析')">全部</span></div>
     <div class="token-list" id="tokenList">
       <div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px;">
         🔗 请先输入以太坊地址查看链上资产
@@ -258,12 +263,12 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
         <div class="chat-quick-actions" id="quickActions">
-          <button class="quick-chip" onclick="sendQuick('查询当前 Gas 费')">⛽ Gas 查询</button>
-          <button class="quick-chip" onclick="sendQuick('查询 ETH 价格')">💰 ETH 价格</button>
-          <button class="quick-chip" onclick="sendQuick('查询区块高度')">📦 区块高度</button>
-          <button class="quick-chip" onclick="sendQuick('分析我的持仓')">📊 持仓分析</button>
-          <button class="quick-chip" onclick="sendQuick('查询 USDT 余额')">₮ USDT 余额</button>
-          <button class="quick-chip" onclick="sendQuick('构建转账 0.01 ETH 到 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')">📤 构建交易</button>
+          <button class="quick-chip" onclick="sendQuick('查询当前 Gas 费')">⛽ Gas</button>
+          <button class="quick-chip" onclick="sendQuick('查询 ETH 价格')">💰 价格</button>
+          <button class="quick-chip" onclick="sendQuick('查询区块高度')">📦 区块</button>
+          <button class="quick-chip" onclick="sendQuick('分析我的持仓')">📊 持仓</button>
+          <button class="quick-chip" onclick="sendQuick('查询 USDT 余额')">₮ USDT</button>
+          <button class="quick-chip" onclick="sendQuick('查询 ENS vitalik.eth')">🏷️ ENS</button>
         </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chatInput" placeholder="对 AI 助手说..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
@@ -283,33 +288,32 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
     </div>
     <div class="section-title">安全检测项</div>
     <div class="security-items">
-      <div class="security-item" onclick="navigateTo('ai');sendQuick('分析我的助记词备份安全')"><div class="icon">🔑</div><div class="info"><h4>助记词备份</h4><p>是否安全离线保存了助记词</p></div><div class="status ok">已备份</div></div>
-      <div class="security-item" onclick="navigateTo('ai');sendQuick('检查我的授权风险')"><div class="icon">🔗</div><div class="info"><h4>合约授权</h4><p>12 个合约已授权，3 个存在风险</p></div><div class="status warn">需关注</div></div>
-      <div class="security-item" onclick="navigateTo('ai');sendQuick('分析最近交易安全性')"><div class="icon">📊</div><div class="info"><h4>交易安全</h4><p>最近 30 天无异常交易</p></div><div class="status ok">安全</div></div>
+      <div class="security-item" onclick="navigateTo('ai');sendQuick('分析助记词备份安全')"><div class="icon">🔑</div><div class="info"><h4>助记词备份</h4><p>是否安全离线保存了助记词</p></div><div class="status ok">已备份</div></div>
+      <div class="security-item" onclick="navigateTo('ai');sendQuick('检查授权风险')"><div class="icon">🔗</div><div class="info"><h4>合约授权</h4><p>检查已授权合约的安全性</p></div><div class="status warn">需关注</div></div>
+      <div class="security-item" onclick="navigateTo('ai');sendQuick('分析交易安全性')"><div class="icon">📊</div><div class="info"><h4>交易安全</h4><p>最近 30 天无异常交易</p></div><div class="status ok">安全</div></div>
       <div class="security-item" onclick="navigateTo('ai');sendQuick('检查钓鱼风险')"><div class="icon">🎣</div><div class="info"><h4>防钓鱼保护</h4><p>未开启恶意网址拦截</p></div><div class="status bad">未开启</div></div>
-      <div class="security-item" onclick="navigateTo('ai');sendQuick('推荐硬件钱包方案')"><div class="icon">🔐</div><div class="info"><h4>硬件钱包</h4><p>大额资产建议使用硬件钱包</p></div><div class="status warn">未连接</div></div>
-      <div class="security-item" onclick="navigateTo('ai');sendQuick('AI 全面安全扫描')"><div class="icon">🤖</div><div class="info"><h4>AI 全面扫描</h4><p>AI 深度扫描所有安全项</p></div><div class="status ok">可用</div></div>
+      <div class="security-item" onclick="navigateTo('ai');sendQuick('推荐硬件钱包')"><div class="icon">🔐</div><div class="info"><h4>硬件钱包</h4><p>大额资产建议使用硬件钱包</p></div><div class="status warn">未连接</div></div>
     </div>
   </section>
 
   <section class="page" id="page-discover">
     <div class="section-title">AI 能力中心 <span class="chain-badge">🔗 链上实时</span></div>
     <div class="discover-grid">
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询当前 Gas 费并推荐交易时机')"><div class="icon">⛽</div><h4>Gas 预测</h4><p>链上实时 Gas 数据</p></div>
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 ETH 最新价格')"><div class="icon">💰</div><h4>价格查询</h4><p>CoinGecko 实时价格</p></div>
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 USDT 余额')"><div class="icon">₮</div><h4>ERC20 余额</h4><p>链上真实代币余额</p></div>
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('构建转账 0.01 ETH 到 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')"><div class="icon">📤</div><h4>构建交易</h4><p>生成真实未签名交易</p></div>
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询当前区块高度')"><div class="icon">📦</div><h4>区块查询</h4><p>链上最新区块信息</p></div>
-      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 ENS vitalik.eth 对应地址')"><div class="icon">🏷️</div><h4>ENS 解析</h4><p>域名 ↔ 地址互查</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询当前 Gas 费')"><div class="icon">⛽</div><h4>Gas 查询</h4><p>链上实时 Gas</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 ETH 最新价格')"><div class="icon">💰</div><h4>价格查询</h4><p>CoinGecko 实时</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 USDT 余额')"><div class="icon">₮</div><h4>ERC20 余额</h4><p>链上真实余额</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询当前区块高度')"><div class="icon">📦</div><h4>区块查询</h4><p>最新区块信息</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('查询 ENS vitalik.eth')"><div class="icon">🏷️</div><h4>ENS 解析</h4><p>域名 ↔ 地址</p></div>
+      <div class="discover-card" onclick="navigateTo('ai');sendQuick('构建转账 0.01 ETH 到 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')"><div class="icon">📤</div><h4>构建交易</h4><p>未签名交易</p></div>
     </div>
     <div class="section-title" style="margin-top:24px">关于作品</div>
     <div style="padding:16px;background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border);">
       <p style="font-size:13px;line-height:1.8;color:var(--text-secondary);">
         <strong style="color:var(--text)">AI Wallet Copilot</strong> — imToken 十周年 AI 共创作品<br><br>
-        🔗 <strong>链上真实数据</strong>：接入 Ethereum Mainnet 公共 RPC，所有余额、Gas、交易均为链上实时数据。<br>
-        🤖 <strong>核心创新</strong>：自然语言驱动钱包操作，AI 解析意图后自动构建链上交易。<br>
-        📤 <strong>真实交易构建</strong>：AI 生成 EIP-1559 未签名交易，可复制到 imToken 签名广播。<br>
-        💰 <strong>CoinGecko 实时价格</strong>：ETH/USDT/BTC 等代币实时 USD 估值。<br>
+        🔗 <strong>链上真实数据</strong>：直连 Ethereum Mainnet 公共 RPC，余额/Gas/交易/ENS 全部链上实时查询。<br>
+        🤖 <strong>核心创新</strong>：自然语言驱动所有钱包操作，无需手动导航。<br>
+        📤 <strong>真实交易构建</strong>：AI 生成 EIP-1559 未签名交易，可导入 imToken 签名广播。<br>
+        💰 <strong>CoinGecko 实时价格</strong>：代币实时 USD 估值 + 24h 涨跌。<br>
         ☀️ <strong>阳光设计</strong>：明亮渐变 + 深色模式，呼应十周年精神。
       </p>
     </div>
@@ -327,13 +331,13 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
   <div class="modal-content">
     <div class="modal-handle"></div>
     <div class="modal-title">🔗 连接以太坊地址</div>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">输入 ETH 地址或 ENS 域名，查看链上真实资产数据。本应用不存储任何私钥。</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">输入 ETH 地址或 ENS 域名，查看链上真实资产。不存储任何私钥。</p>
     <div class="addr-input-wrap">
       <input class="addr-input" id="addrInput" placeholder="0x... 或 vitalik.eth" />
       <button class="addr-btn" onclick="connectAddress()">连接</button>
     </div>
     <div style="margin-top:12px;">
-      <p style="font-size:12px;color:var(--text-muted);">快速体验（知名地址）：</p>
+      <p style="font-size:12px;color:var(--text-muted);">快速体验：</p>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
         <button class="quick-chip" onclick="setAddr('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')">vitalik.eth</button>
         <button class="quick-chip" onclick="setAddr('0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5')">ETH Foundation</button>
@@ -363,8 +367,6 @@ const KNOWN_ERC20 = [
   { symbol:'USDC', address:'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', icon:'💲', color:'#2775CA' },
   { symbol:'LINK', address:'0x514910771AF9Ca656af840dff83E8264EcF986CA', icon:'⬡', color:'#2A5ADA' },
   { symbol:'UNI',  address:'0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', icon:'🦄', color:'#FF007A' },
-  { symbol:'ARB',  address:'0xB50721BCf8d664C30412Cfbc6cf7a15145234ad1', icon:'🔵', color:'#28A0F0' },
-  { symbol:'OP',   address:'0x4200000000000000000000000000000000000042', icon:'🔴', color:'#FF0420' },
   { symbol:'AAVE', address:'0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', icon:'👻', color:'#B6509E' },
 ];
 
@@ -374,21 +376,51 @@ let tokenPrices = {};
 let tokenBalances = {};
 let rpcIndex = 0;
 
-// Retry helper: auto-switch RPC on failure
+// ========== Wait for ethers.js ==========
+function waitForEthers(maxWait) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      if (typeof ethers !== 'undefined' && ethers.providers) { resolve(); return; }
+      if (Date.now() - start > maxWait) { reject(new Error('ethers.js 加载超时')); return; }
+      setTimeout(check, 200);
+    };
+    check();
+  });
+}
+
+// ========== RPC with failover ==========
+async function rpcCall(method, params = []) {
+  for (let i = 0; i < RPC_URLS.length; i++) {
+    const url = RPC_URLS[(rpcIndex + i) % RPC_URLS.length];
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      rpcIndex = (rpcIndex + i) % RPC_URLS.length;
+      return data.result;
+    } catch(e) {
+      console.warn(`RPC ${url} failed:`, e.message);
+    }
+  }
+  throw new Error('所有 RPC 节点均不可用');
+}
+
 async function withProvider(fn, retries = 2) {
   for (let i = 0; i <= retries; i++) {
     try {
       if (!provider) await initProvider();
       return await fn(provider);
     } catch(e) {
-      console.warn(`RPC call failed (attempt ${i+1}):`, e.message);
+      console.warn(`Provider call failed (${i+1}):`, e.message);
       if (i < retries) {
         rpcIndex = (rpcIndex + 1) % RPC_URLS.length;
-        console.log('Switching to RPC:', RPC_URLS[rpcIndex]);
         provider = new ethers.providers.JsonRpcProvider(RPC_URLS[rpcIndex]);
-      } else {
-        throw e;
-      }
+      } else throw e;
     }
   }
 }
@@ -398,7 +430,18 @@ setTimeout(async () => {
   document.getElementById('splash').classList.add('hide');
   document.getElementById('app').style.display = 'block';
   setTimeout(() => document.getElementById('splash').style.display = 'none', 600);
-  initProvider();
+
+  // Wait for ethers.js to load
+  try {
+    await waitForEthers(15000);
+    document.getElementById('statusLabel').textContent = '● ethers.js 已加载';
+    await initProvider();
+  } catch(e) {
+    console.error('Init failed:', e);
+    document.getElementById('statusLabel').textContent = '● 加载失败，请刷新';
+    document.getElementById('statusLabel').classList.add('offline');
+    document.getElementById('networkBadge').textContent = '⚠️ 加载失败';
+  }
   addAiWelcome();
 }, 2200);
 
@@ -411,477 +454,340 @@ async function initProvider() {
       document.getElementById('statusLabel').textContent = '● Ethereum Mainnet';
       document.getElementById('statusLabel').classList.remove('offline');
       document.getElementById('networkBadge').textContent = '🔗 Ethereum Mainnet';
-      console.log('Connected via:', url, network.name);
+      console.log('Connected via:', url);
       return;
     } catch(e) {
       console.warn('RPC failed:', url, e.message);
     }
   }
-  console.error('All RPCs failed');
-  document.getElementById('statusLabel').textContent = '● 连接失败';
+  document.getElementById('statusLabel').textContent = '● RPC 连接失败';
   document.getElementById('statusLabel').classList.add('offline');
   document.getElementById('networkBadge').textContent = '⚠️ 连接失败';
 }
 
-// ========== Address Connection ==========
+// ========== Address ==========
 function showAddressModal() { document.getElementById('addrModal').classList.add('show'); document.getElementById('addrInput').focus(); }
 function setAddr(addr) { document.getElementById('addrInput').value = addr; connectAddress(); }
 
 async function connectAddress() {
+  if (typeof ethers === 'undefined') { showToast('❌ ethers.js 未加载，请刷新页面'); return; }
   let addr = document.getElementById('addrInput').value.trim();
   if (!addr) { showToast('❌ 请输入地址'); return; }
 
-  // Resolve ENS
   if (addr.endsWith('.eth')) {
     showToast('🔄 解析 ENS...');
     try {
       const resolved = await withProvider(p => p.resolveName(addr));
       if (resolved) { addr = resolved; showToast('✅ ENS 解析成功'); }
-    } catch(e) { showToast('❌ ENS 解析失败: ' + e.message?.slice(0,60)); return; }
+    } catch(e) { showToast('❌ ENS 解析失败'); return; }
   }
 
-  if (!ethers.utils.isAddress(addr)) { showToast('❌ 无效的以太坊地址'); return; }
+  if (!ethers.utils.isAddress(addr)) { showToast('❌ 无效地址'); return; }
 
   currentAddress = addr;
   closeModal('addrModal');
   document.getElementById('connectBtn').classList.add('connected');
   document.getElementById('bannerIcon').textContent = '✅';
   document.getElementById('bannerTitle').textContent = shortAddr(addr);
-  document.getElementById('bannerDesc').textContent = '已连接 · 点击切换地址';
-  document.getElementById('bannerTitle').onclick = () => navigator.clipboard.writeText(addr).then(()=>showToast('📋 地址已复制'));
-
+  document.getElementById('bannerDesc').textContent = '已连接 · 点击切换';
   showToast('🔄 加载链上数据...');
   await loadChainData();
 }
 
-function shortAddr(addr) { return addr.slice(0,6) + '...' + addr.slice(-4); }
+function shortAddr(a) { return a.slice(0,6)+'...'+a.slice(-4); }
 
 async function loadChainData() {
   if (!currentAddress || !provider) return;
   try {
-    // 1. ETH balance
     const ethBal = await withProvider(p => p.getBalance(currentAddress));
-    const ethBalFormatted = parseFloat(ethers.utils.formatEther(ethBal));
-    tokenBalances['ETH'] = ethBalFormatted;
+    tokenBalances['ETH'] = parseFloat(ethers.utils.formatEther(ethBal));
 
-    // 2. ERC20 balances
     for (const token of KNOWN_ERC20) {
       try {
-        const bal = await withProvider(async (p) => {
-          const contract = new ethers.Contract(token.address, ERC20_ABI, p);
-          const [rawBal, decimals] = await Promise.all([contract.balanceOf(currentAddress), contract.decimals()]);
-          return { rawBal, decimals };
+        const info = await withProvider(async (p) => {
+          const c = new ethers.Contract(token.address, ERC20_ABI, p);
+          const [rawBal, dec] = await Promise.all([c.balanceOf(currentAddress), c.decimals()]);
+          return { rawBal, dec };
         });
-        const b = parseFloat(ethers.utils.formatUnits(bal.rawBal, bal.decimals));
+        const b = parseFloat(ethers.utils.formatUnits(info.rawBal, info.dec));
         if (b > 0) tokenBalances[token.symbol] = b;
-      } catch(e) { /* skip failed tokens */ }
+      } catch(e) {}
     }
-
-    // 3. Prices from CoinGecko
     await fetchPrices();
-
-    // 4. Render
     renderTokenList();
     updateTotalBalance();
   } catch(e) {
-    console.error('Load chain data error:', e);
-    showToast('❌ 加载数据失败，请重试');
+    console.error('Load error:', e);
+    showToast('❌ 加载失败，请重试');
   }
 }
 
 async function fetchPrices() {
   try {
-    const ids = 'ethereum,tether,usd-coin,chainlink,uniswap,arbitrum,aave';
-    const resp = await fetch(`${COINGECKO_API}/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    const resp = await fetch(`${COINGECKO_API}/simple/price?ids=ethereum,tether,usd-coin,chainlink,uniswap,aave&vs_currencies=usd&include_24hr_change=true`);
     const data = await resp.json();
-    const map = {
-      'ethereum':'ETH', 'tether':'USDT', 'usd-coin':'USDC',
-      'chainlink':'LINK', 'uniswap':'UNI', 'arbitrum':'ARB', 'aave':'AAVE'
-    };
+    const map = { 'ethereum':'ETH','tether':'USDT','usd-coin':'USDC','chainlink':'LINK','uniswap':'UNI','aave':'AAVE' };
     for (const [id, info] of Object.entries(data)) {
       const sym = map[id];
       if (sym) tokenPrices[sym] = { usd: info.usd, change24h: info.usd_24h_change };
     }
   } catch(e) {
-    console.error('Price fetch error:', e);
-    // Fallback prices
     tokenPrices = { ETH:{usd:2500,change24h:0}, USDT:{usd:1,change24h:0}, USDC:{usd:1,change24h:0} };
   }
 }
 
 function updateTotalBalance() {
   let total = 0;
-  for (const [sym, bal] of Object.entries(tokenBalances)) {
-    const price = tokenPrices[sym]?.usd || 0;
-    total += bal * price;
-  }
-  document.getElementById('totalBalance').textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  const ethChange = tokenPrices['ETH']?.change24h;
-  if (ethChange !== undefined) {
-    const sign = ethChange >= 0 ? '↑ +' : '↓ ';
-    document.getElementById('balanceChange').textContent = `${sign}${ethChange.toFixed(2)}% · 24h (ETH)`;
-  }
+  for (const [sym, bal] of Object.entries(tokenBalances)) { total += bal * (tokenPrices[sym]?.usd||0); }
+  document.getElementById('totalBalance').textContent = '$'+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const c = tokenPrices['ETH']?.change24h;
+  if (c !== undefined) document.getElementById('balanceChange').textContent = `${c>=0?'↑ +':'↓ '}${c.toFixed(2)}% · 24h`;
 }
 
 function renderTokenList() {
   const list = document.getElementById('tokenList');
   const entries = [];
-
-  // ETH first
-  if (tokenBalances['ETH'] !== undefined) {
-    entries.push({ symbol:'ETH', name:'Ethereum', icon:'⟠', color:'#627EEA', balance:tokenBalances['ETH'], price:tokenPrices['ETH']?.usd||0, change:tokenPrices['ETH']?.change24h||0 });
+  if (tokenBalances['ETH'] !== undefined) entries.push({symbol:'ETH',name:'Ethereum',icon:'⟠',color:'#627EEA',balance:tokenBalances['ETH'],price:tokenPrices['ETH']?.usd||0,change:tokenPrices['ETH']?.change24h||0});
+  for (const t of KNOWN_ERC20) {
+    const b = tokenBalances[t.symbol];
+    if (b && b > 0) entries.push({...t,name:t.symbol,balance:b,price:tokenPrices[t.symbol]?.usd||0,change:tokenPrices[t.symbol]?.change24h||0});
   }
-
-  // ERC20
-  for (const token of KNOWN_ERC20) {
-    const bal = tokenBalances[token.symbol];
-    if (bal && bal > 0) {
-      entries.push({ ...token, name:token.symbol, balance:bal, price:tokenPrices[token.symbol]?.usd||0, change:tokenPrices[token.symbol]?.change24h||0 });
-    }
-  }
-
-  if (entries.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px;">📭 该地址无代币资产</div>';
-    return;
-  }
-
-  list.innerHTML = entries.map(t => {
-    const value = (t.balance * t.price).toFixed(2);
-    const changeClass = (t.change||0) >= 0 ? 'up' : 'down';
-    const changeSign = (t.change||0) >= 0 ? '+' : '';
-    const balStr = t.balance < 0.0001 ? '<0.0001' : t.balance.toFixed(t.balance > 100 ? 2 : 4);
-    return `
-      <div class="token-item" onclick="navigateTo('ai');sendQuick('分析 ${t.symbol} 的链上数据')">
-        <div class="token-icon" style="background:${t.color}20;color:${t.color}">${t.icon}</div>
-        <div class="token-info">
-          <div class="token-name">${t.symbol} ${t.symbol==='ETH'?'<span class="badge">链上</span>':''}</div>
-          <div class="token-amount">${balStr} ${t.symbol}</div>
-        </div>
-        <div class="token-value">
-          <div class="token-price">$${value}</div>
-          <div class="token-change ${changeClass}">${changeSign}${(t.change||0).toFixed(2)}%</div>
-        </div>
-      </div>`;
+  if (!entries.length) { list.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text-muted)">📭 该地址无代币资产</div>'; return; }
+  list.innerHTML = entries.map(t=>{
+    const v=(t.balance*t.price).toFixed(2), cc=(t.change||0)>=0?'up':'down', cs=(t.change||0)>=0?'+':'';
+    const bs=t.balance<0.0001?'<0.0001':t.balance.toFixed(t.balance>100?2:4);
+    return `<div class="token-item" onclick="navigateTo('ai');sendQuick('分析 ${t.symbol}')">
+      <div class="token-icon" style="background:${t.color}20;color:${t.color}">${t.icon}</div>
+      <div class="token-info"><div class="token-name">${t.symbol} ${t.symbol==='ETH'?'<span class="badge">链上</span>':''}</div><div class="token-amount">${bs} ${t.symbol}</div></div>
+      <div class="token-value"><div class="token-price">$${v}</div><div class="token-change ${cc}">${cs}${(t.change||0).toFixed(2)}%</div></div>
+    </div>`;
   }).join('');
 }
 
 // ========== Navigation ==========
-function navigateTo(page) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById(`page-${page}`).classList.add('active');
-  const idx=['wallet','ai','security','discover'].indexOf(page);
-  if(idx>=0) document.querySelectorAll('.nav-item')[idx].classList.add('active');
-  if(page==='ai') setTimeout(()=>document.getElementById('chatInput').focus(),100);
+function navigateTo(p) {
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById(`page-${p}`).classList.add('active');
+  const i=['wallet','ai','security','discover'].indexOf(p);
+  if(i>=0) document.querySelectorAll('.nav-item')[i].classList.add('active');
+  if(p==='ai') setTimeout(()=>document.getElementById('chatInput').focus(),100);
 }
 function toggleTheme() {
-  const isLight=document.documentElement.getAttribute('data-theme')==='light';
-  document.documentElement.setAttribute('data-theme',isLight?'dark':'light');
-  document.getElementById('themeBtn').textContent=isLight?'🌙':'☀️';
-  showToast(isLight?'🌙 深色模式':'☀️ 阳光模式');
+  const l=document.documentElement.getAttribute('data-theme')==='light';
+  document.documentElement.setAttribute('data-theme',l?'dark':'light');
+  document.getElementById('themeBtn').textContent=l?'🌙':'☀️';
+  showToast(l?'🌙 深色模式':'☀️ 阳光模式');
 }
-function showToast(msg) { const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500); }
+function showToast(m) { const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function setInput(msg) { const i=document.getElementById('chatInput');i.value=msg;i.focus(); }
+function setInput(m) { const i=document.getElementById('chatInput');i.value=m;i.focus(); }
 
 // ========== AI Chat ==========
 function addAiWelcome() {
   document.getElementById('chatMessages').innerHTML = `
-    <div class="chat-msg ai">
-      <div class="chat-avatar">🤖</div>
-      <div class="chat-bubble">
-        你好！我是 AI Wallet Copilot 👋<br><br>
-        🔗 <strong>链上真实数据</strong>，不是模拟！我能帮你：<br>
-        💰 「查询 ETH 价格」— CoinGecko 实时价格<br>
-        ⛽ 「查询当前 Gas 费」— 链上实时 Gas<br>
-        📦 「查询区块高度」— 最新区块信息<br>
-        📤 「构建转账 0.01 ETH 到 0x...」— 生成真实未签名交易<br>
-        ₮ 「查询 USDT 余额」— ERC20 链上余额<br>
-        🏷️ 「查询 ENS vitalik.eth」— ENS 域名解析<br><br>
-        先点右上角 🔗 连接一个以太坊地址试试！
-      </div>
-    </div>`;
+    <div class="chat-msg ai"><div class="chat-avatar">🤖</div><div class="chat-bubble">
+      你好！我是 AI Wallet Copilot 👋<br><br>
+      🔗 <strong>链上真实数据</strong>，不是模拟！<br>
+      💰 「查询 ETH 价格」— CoinGecko 实时价格<br>
+      ⛽ 「查询 Gas 费」— 链上实时 Gas<br>
+      📦 「查询区块高度」— 最新区块<br>
+      ₮ 「查询 USDT 余额」— ERC20 链上余额<br>
+      🏷️ 「查询 ENS vitalik.eth」— 域名解析<br>
+      📤 「构建转账 0.01 ETH 到 0x...」— 生成未签名交易<br><br>
+      先点右上角 🔗 连接地址试试！
+    </div></div>`;
 }
 
-function addMessage(type, content) {
-  const msgs=document.getElementById('chatMessages');
-  const div=document.createElement('div'); div.className=`chat-msg ${type}`;
-  const avatar=type==='ai'?'🤖':'🧑';
-  div.innerHTML=`<div class="chat-avatar">${avatar}</div><div class="chat-bubble">${content}</div>`;
-  msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight; return div;
+function addMessage(t,c) {
+  const m=document.getElementById('chatMessages'),d=document.createElement('div');d.className=`chat-msg ${t}`;
+  d.innerHTML=`<div class="chat-avatar">${t==='ai'?'🤖':'🧑'}</div><div class="chat-bubble">${c}</div>`;
+  m.appendChild(d);m.scrollTop=m.scrollHeight;
 }
 function showTyping() {
-  const msgs=document.getElementById('chatMessages');
-  const div=document.createElement('div'); div.className='chat-msg ai'; div.id='typing';
-  div.innerHTML='<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
-  msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight;
+  const m=document.getElementById('chatMessages'),d=document.createElement('div');d.className='chat-msg ai';d.id='typing';
+  d.innerHTML='<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  m.appendChild(d);m.scrollTop=m.scrollHeight;
 }
-function removeTyping() { const el=document.getElementById('typing'); if(el) el.remove(); }
-function sendMessage() {
-  const input=document.getElementById('chatInput'); const msg=input.value.trim();
-  if(!msg) return; input.value=''; input.style.height='auto';
-  addMessage('user',msg); showTyping();
-  processAiCommand(msg);
-}
-function sendQuick(msg) { document.getElementById('chatInput').value=msg; sendMessage(); }
+function removeTyping() { document.getElementById('typing')?.remove(); }
+function sendMessage() { const i=document.getElementById('chatInput'),m=i.value.trim(); if(!m)return; i.value='';i.style.height='auto'; addMessage('user',m);showTyping();processAiCommand(m); }
+function sendQuick(m) { document.getElementById('chatInput').value=m; sendMessage(); }
 
-// ========== Real Chain Commands ==========
+// ========== Chain Commands ==========
 async function processAiCommand(msg) {
   const lower = msg.toLowerCase();
 
+  // Check ethers availability first
+  if (typeof ethers === 'undefined') {
+    removeTyping();
+    addMessage('ai','❌ ethers.js 库尚未加载完成，请稍等几秒后重试，或刷新页面。');
+    return;
+  }
+
   try {
-    // Gas query
+    // Gas
     if (lower.includes('gas')) {
       const feeData = await withProvider(p => p.getFeeData());
-      const baseGwei = ethers.utils.formatUnits(feeData.gasPrice || 0, 'gwei');
-      const priorityGwei = feeData.maxPriorityFeePerGas ? ethers.utils.formatUnits(feeData.maxPriorityFeePerGas, 'gwei') : '0';
-      const gweiNum = parseFloat(baseGwei).toFixed(1);
-      const lowGwei = (gweiNum * 0.8).toFixed(1);
-      const fastGwei = (gweiNum * 1.5).toFixed(1);
-      const ethPrice = tokenPrices['ETH']?.usd || 2500;
-      const gasCostUsd = ((parseFloat(gweiNum) * 21000 * 1e-9) * ethPrice).toFixed(2);
-
+      const baseGwei = parseFloat(ethers.utils.formatUnits(feeData.gasPrice||0,'gwei')).toFixed(1);
+      const priGwei = feeData.maxPriorityFeePerGas ? parseFloat(ethers.utils.formatUnits(feeData.maxPriorityFeePerGas,'gwei')).toFixed(1) : '0';
+      const ethP = tokenPrices['ETH']?.usd||2500;
+      const gasUsd = ((parseFloat(baseGwei)*21000*1e-9)*ethP).toFixed(2);
       removeTyping();
-      addMessage('ai', `⚡ 链上实时 Gas 数据（来自 Ethereum Mainnet）：<div class="ai-action-card">
-        <h5>⛽ 实时 Gas 费用</h5>
+      addMessage('ai',`⚡ 链上实时 Gas（Ethereum Mainnet）：<div class="ai-action-card"><h5>⛽ Gas 费用</h5>
         <div class="gas-gauge">
-          <div class="gas-item"><div class="speed">🐢 低速</div><div class="gwei">${lowGwei}</div><div class="time">~5 min</div></div>
-          <div class="gas-item selected"><div class="speed">🚶 标准</div><div class="gwei">${gweiNum}</div><div class="time">~2 min</div></div>
-          <div class="gas-item"><div class="speed">🚀 快速</div><div class="gwei">${fastGwei}</div><div class="time">~30s</div></div>
+          <div class="gas-item"><div class="speed">🐢 低速</div><div class="gwei">${(baseGwei*0.8).toFixed(1)}</div><div class="time">~5min</div></div>
+          <div class="gas-item selected"><div class="speed">🚶 标准</div><div class="gwei">${baseGwei}</div><div class="time">~2min</div></div>
+          <div class="gas-item"><div class="speed">🚀 快速</div><div class="gwei">${(baseGwei*1.5).toFixed(1)}</div><div class="time">~30s</div></div>
         </div>
-        <div class="ai-action-row"><span class="label">Base Fee</span><span class="value">${gweiNum} Gwei</span></div>
-        <div class="ai-action-row"><span class="label">Priority Fee</span><span class="value">${parseFloat(priorityGwei).toFixed(1)} Gwei</span></div>
-        <div class="ai-action-row"><span class="label">简单转账 Gas</span><span class="value">21,000</span></div>
-        <div class="ai-action-row"><span class="label">预估费用 (USD)</span><span class="value" style="color:var(--accent);">≈ $${gasCostUsd}</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：Ethereum Mainnet RPC 实时查询</p>
-      </div>`);
-      bindGasItems();
+        <div class="ai-action-row"><span class="label">Base Fee</span><span class="value">${baseGwei} Gwei</span></div>
+        <div class="ai-action-row"><span class="label">Priority</span><span class="value">${priGwei} Gwei</span></div>
+        <div class="ai-action-row"><span class="label">转账费用</span><span class="value" style="color:var(--accent)">≈ $${gasUsd}</span></div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">🔗 Ethereum Mainnet RPC 实时查询</p></div>`);
+      setTimeout(()=>{document.querySelectorAll('.gas-item').forEach(i=>i.onclick=function(){document.querySelectorAll('.gas-item').forEach(x=>x.classList.remove('selected'));this.classList.add('selected');});},100);
       return;
     }
 
-    // ETH price
-    if (lower.includes('价格') || lower.includes('price') || (lower.includes('eth') && (lower.includes('多少') || lower.includes('查询')))) {
+    // Price
+    if (lower.includes('价格')||lower.includes('price')||(lower.includes('eth')&&lower.includes('多少'))) {
       await fetchPrices();
-      const ethP = tokenPrices['ETH']?.usd;
-      const ethC = tokenPrices['ETH']?.change24h;
+      let rows='';
+      for(const[s,p]of Object.entries(tokenPrices)){rows+=`<div class="ai-action-row"><span class="label">${s}</span><span class="value">$${p.usd?.toLocaleString()} ${p.change24h!==undefined?(p.change24h>=0?'<span style="color:var(--accent)">↑':'<span style="color:var(--danger)">↓')+Math.abs(p.change24h).toFixed(2)+'%</span>':''}</span></div>`;}
       removeTyping();
-      let priceRows = '';
-      for (const [sym, p] of Object.entries(tokenPrices)) {
-        priceRows += `<div class="ai-action-row"><span class="label">${sym}</span><span class="value">$${p.usd?.toLocaleString()} ${p.change24h !== undefined ? (p.change24h>=0?'<span style="color:var(--accent)">↑':'<span style="color:var(--danger)">↓') + Math.abs(p.change24h).toFixed(2)+'%</span>' : ''}</span></div>`;
-      }
-      addMessage('ai', `💰 CoinGecko 实时价格：<div class="ai-action-card"><h5>📊 代币价格 (USD)</h5>${priceRows}<p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：CoinGecko API 实时查询</p></div>`);
+      addMessage('ai',`💰 CoinGecko 实时价格：<div class="ai-action-card"><h5>📊 代币价格</h5>${rows}<p style="font-size:12px;color:var(--text-muted);margin-top:8px">🔗 CoinGecko API</p></div>`);
       return;
     }
 
-    // Block number
-    if (lower.includes('区块') || lower.includes('block')) {
-      const blockNum = await withProvider(p => p.getBlockNumber());
-      const block = await withProvider(p => p.getBlock(blockNum));
+    // Block
+    if (lower.includes('区块')||lower.includes('block')) {
+      const bn = await withProvider(p=>p.getBlockNumber());
+      const b = await withProvider(p=>p.getBlock(bn));
       removeTyping();
-      addMessage('ai', `📦 链上最新区块信息：<div class="ai-action-card">
-        <h5>⛓️ Block #${blockNum.toLocaleString()}</h5>
-        <div class="ai-action-row"><span class="label">区块号</span><span class="value">#${blockNum.toLocaleString()}</span></div>
-        <div class="ai-action-row"><span class="label">时间戳</span><span class="value">${new Date(block.timestamp*1000).toLocaleString('zh-CN')}</span></div>
-        <div class="ai-action-row"><span class="label">Gas Used</span><span class="value">${block.gasUsed?.toLocaleString() || '—'}</span></div>
-        <div class="ai-action-row"><span class="label">Gas Limit</span><span class="value">${block.gasLimit?.toLocaleString() || '—'}</span></div>
-        <div class="ai-action-row"><span class="label">矿工</span><span class="value" style="font-size:11px;">${block.miner?.slice(0,10)}...${block.miner?.slice(-6)}</span></div>
-        <div class="ai-action-row"><span class="label">交易数</span><span class="value">${block.transactions?.length || '—'}</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：Ethereum Mainnet RPC</p>
-      </div>`);
+      addMessage('ai',`📦 链上最新区块：<div class="ai-action-card"><h5>⛓️ Block #${bn.toLocaleString()}</h5>
+        <div class="ai-action-row"><span class="label">区块号</span><span class="value">#${bn.toLocaleString()}</span></div>
+        <div class="ai-action-row"><span class="label">时间</span><span class="value">${new Date(b.timestamp*1000).toLocaleString('zh-CN')}</span></div>
+        <div class="ai-action-row"><span class="label">Gas Used</span><span class="value">${b.gasUsed?.toLocaleString()||'—'}</span></div>
+        <div class="ai-action-row"><span class="label">矿工</span><span class="value" style="font-size:11px">${b.miner?.slice(0,10)}...${b.miner?.slice(-4)}</span></div>
+        <div class="ai-action-row"><span class="label">交易数</span><span class="value">${b.transactions?.length||'—'}</span></div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">🔗 Ethereum Mainnet RPC</p></div>`);
       return;
     }
 
-    // Build transaction
-    if (lower.includes('转账') || lower.includes('构建') || lower.includes('交易')) {
+    // Build tx
+    if (lower.includes('转账')||lower.includes('构建')||lower.includes('交易')) {
       const match = msg.match(/([\d.]+)\s*ETH\s*[到给至]\s*(0x[a-fA-F0-9]{40})/i);
       if (match) {
-        const [, amount, to] = match;
-        const from = currentAddress || '0x0000000000000000000000000000000000000000';
-        const feeData = await withProvider(p => p.getFeeData());
-        const nonce = await withProvider(p => p.getTransactionCount(from));
-        const txReq = {
-          to: to,
-          value: ethers.utils.parseEther(amount),
-          nonce: nonce,
-          gasLimit: 21000,
-          maxFeePerGas: feeData.maxFeePerGas,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-          type: 2,
-          chainId: 1
-        };
-        const unsignedTx = ethers.utils.serializeTransaction(txReq);
-        const txHash = ethers.utils.keccak256(unsignedTx);
-        const ethPrice = tokenPrices['ETH']?.usd || 2500;
-        const gasCostEth = 21000 * parseFloat(ethers.utils.formatUnits(feeData.maxFeePerGas || 0, 'ether'));
-        const gasCostUsd = (gasCostEth * ethPrice).toFixed(2);
-
+        const[,amount,to]=match;
+        const from=currentAddress||'0x0000000000000000000000000000000000000000';
+        const feeData=await withProvider(p=>p.getFeeData());
+        const nonce=await withProvider(p=>p.getTransactionCount(from));
+        const txReq={to,value:ethers.utils.parseEther(amount),nonce,gasLimit:21000,maxFeePerGas:feeData.maxFeePerGas,maxPriorityFeePerGas:feeData.maxPriorityFeePerGas,type:2,chainId:1};
+        const unsignedTx=ethers.utils.serializeTransaction(txReq);
+        const txHash=ethers.utils.keccak256(unsignedTx);
+        const ethP=tokenPrices['ETH']?.usd||2500;
+        const gasEth=21000*parseFloat(ethers.utils.formatUnits(feeData.maxFeePerGas||0,'ether'));
         removeTyping();
-        addMessage('ai', `📤 已构建真实 EIP-1559 未签名交易：<div class="ai-action-card">
-          <h5>🔗 链上交易详情</h5>
+        addMessage('ai',`📤 已构建真实 EIP-1559 未签名交易：<div class="ai-action-card"><h5>🔗 交易详情</h5>
           <div class="ai-action-row"><span class="label">金额</span><span class="value">${amount} ETH</span></div>
-          <div class="ai-action-row"><span class="label">≈ USD</span><span class="value">$${(parseFloat(amount)*ethPrice).toFixed(2)}</span></div>
-          <div class="ai-action-row"><span class="label">发送方</span><span class="value" style="font-size:11px;">${currentAddress ? shortAddr(from) : '未连接'}</span></div>
-          <div class="ai-action-row"><span class="label">接收方</span><span class="value" style="font-size:11px;">${shortAddr(to)}</span></div>
+          <div class="ai-action-row"><span class="label">≈ USD</span><span class="value">$${(parseFloat(amount)*ethP).toFixed(2)}</span></div>
+          <div class="ai-action-row"><span class="label">From</span><span class="value" style="font-size:11px">${currentAddress?shortAddr(from):'未连接'}</span></div>
+          <div class="ai-action-row"><span class="label">To</span><span class="value" style="font-size:11px">${shortAddr(to)}</span></div>
           <div class="ai-action-row"><span class="label">Nonce</span><span class="value">${nonce}</span></div>
-          <div class="ai-action-row"><span class="label">Gas Limit</span><span class="value">21,000</span></div>
-          <div class="ai-action-row"><span class="label">预估 Gas 费</span><span class="value" style="color:var(--accent);">≈ $${gasCostUsd}</span></div>
-          <div class="ai-action-row"><span class="label">TX Hash (unsigned)</span><span class="value" style="font-size:10px;">${txHash.slice(0,18)}...</span></div>
-          <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">📋 未签名交易（复制到 imToken 签名广播）：</p>
+          <div class="ai-action-row"><span class="label">Gas 费</span><span class="value" style="color:var(--accent)">≈ $${(gasEth*ethP).toFixed(2)}</span></div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:6px">📋 未签名交易 hex：</p>
           <div class="tx-hex-box" id="unsignedTxHex">${unsignedTx}</div>
-          <div class="ai-action-btns">
-            <button class="ai-action-btn confirm" onclick="copyTx()">📋 复制交易</button>
-            <button class="ai-action-btn cancel" onclick="closeModal('txModal')">关闭</button>
-          </div>
-          <p style="font-size:11px;color:var(--warning);margin-top:8px;">⚠️ 这是未签名交易，无法直接广播。需在 imToken 等钱包中签名后才能发送。</p>
-        </div>`);
+          <div class="ai-action-btns"><button class="ai-action-btn confirm" onclick="copyTx()">📋 复制</button><button class="ai-action-btn cancel" onclick="removeTyping()">关闭</button></div>
+          <p style="font-size:11px;color:var(--warning);margin-top:8px">⚠️ 需在 imToken 签名后才能广播</p></div>`);
         return;
       }
       removeTyping();
-      addMessage('ai', '请使用格式：构建转账 0.01 ETH 到 0x地址<br><br>例如：「构建转账 0.01 ETH 到 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045」');
+      addMessage('ai','格式：构建转账 0.01 ETH 到 0x地址');
       return;
     }
 
     // ERC20 balance
-    if (lower.includes('usdt') || lower.includes('usdc') || lower.includes('link') || lower.includes('uni') || lower.includes('aave') || lower.includes('erc20') || lower.includes('余额')) {
-      if (!currentAddress) { removeTyping(); addMessage('ai','❌ 请先连接以太坊地址（点击右上角 🔗）'); return; }
-      const symMatch = msg.match(/(USDT|USDC|LINK|UNI|ARB|AAVE)/i);
-      const targetSym = symMatch ? symMatch[1].toUpperCase() : 'USDT';
-      const tokenInfo = KNOWN_ERC20.find(t => t.symbol === targetSym);
-      if (!tokenInfo) { removeTyping(); addMessage('ai','❌ 不支持的代币'); return; }
-
-      const contractInfo = await withProvider(async (p) => {
-        const contract = new ethers.Contract(tokenInfo.address, ERC20_ABI, p);
-        const [rawBal, decimals] = await Promise.all([contract.balanceOf(currentAddress), contract.decimals()]);
-        return { rawBal, decimals };
-      });
-      const bal = ethers.utils.formatUnits(contractInfo.rawBal, contractInfo.decimals);
-      const price = tokenPrices[targetSym]?.usd || 0;
-      const usdVal = (parseFloat(bal) * price).toFixed(2);
-
+    if (lower.includes('usdt')||lower.includes('usdc')||lower.includes('link')||lower.includes('uni')||lower.includes('aave')||lower.includes('余额')) {
+      if(!currentAddress){removeTyping();addMessage('ai','❌ 请先连接地址（右上角 🔗）');return;}
+      const sm=msg.match(/(USDT|USDC|LINK|UNI|AAVE)/i);
+      const ts=sm?sm[1].toUpperCase():'USDT';
+      const ti=KNOWN_ERC20.find(t=>t.symbol===ts);
+      if(!ti){removeTyping();addMessage('ai','❌ 不支持的代币');return;}
+      const info=await withProvider(async(p)=>{const c=new ethers.Contract(ti.address,ERC20_ABI,p);const[r,d]=await Promise.all([c.balanceOf(currentAddress),c.decimals()]);return{r,d};});
+      const bal=ethers.utils.formatUnits(info.r,info.d);
+      const price=tokenPrices[ts]?.usd||0;
       removeTyping();
-      addMessage('ai', `🔗 链上真实 ${targetSym} 余额：<div class="ai-action-card">
-        <h5>${tokenInfo.icon} ${targetSym} 余额</h5>
-        <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px;">${shortAddr(currentAddress)}</span></div>
-        <div class="ai-action-row"><span class="label">余额</span><span class="value">${parseFloat(bal).toLocaleString()} ${targetSym}</span></div>
-        <div class="ai-action-row"><span class="label">≈ USD</span><span class="value" style="color:var(--accent);">$${usdVal}</span></div>
-        <div class="ai-action-row"><span class="label">合约</span><span class="value" style="font-size:10px;">${shortAddr(tokenInfo.address)}</span></div>
-        <div class="ai-action-row"><span class="label">Decimals</span><span class="value">${contractInfo.decimals}</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：Ethereum Mainnet RPC 链上查询</p>
-      </div>`);
+      addMessage('ai',`🔗 链上 ${ts} 余额：<div class="ai-action-card"><h5>${ti.icon} ${ts}</h5>
+        <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px">${shortAddr(currentAddress)}</span></div>
+        <div class="ai-action-row"><span class="label">余额</span><span class="value">${parseFloat(bal).toLocaleString()} ${ts}</span></div>
+        <div class="ai-action-row"><span class="label">≈ USD</span><span class="value" style="color:var(--accent)">$${(parseFloat(bal)*price).toFixed(2)}</span></div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">🔗 Ethereum Mainnet RPC</p></div>`);
       return;
     }
 
     // ENS
-    if (lower.includes('ens') || lower.includes('域名')) {
-      const ensMatch = msg.match(/([\w-]+\.eth)/i);
-      if (ensMatch) {
-        const ensName = ensMatch[1];
-        const resolved = await withProvider(p => p.resolveName(ensName));
+    if (lower.includes('ens')||lower.includes('域名')) {
+      const em=msg.match(/([\w-]+\.eth)/i);
+      if(em){
+        const resolved=await withProvider(p=>p.resolveName(em[1]));
         removeTyping();
-        if (resolved) {
-          addMessage('ai', `🏷️ ENS 解析结果：<div class="ai-action-card">
-            <h5>ENS 域名解析</h5>
-            <div class="ai-action-row"><span class="label">域名</span><span class="value">${ensName}</span></div>
-            <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px;">${resolved}</span></div>
-            <div class="ai-action-btns"><button class="ai-action-btn confirm" onclick="setAddr('${resolved}');closeModal('addrModal')">🔗 用此地址连接</button></div>
-          </div>`);
-        } else {
-          addMessage('ai', `❌ 无法解析 ENS 域名「${ensName}」`);
-        }
+        if(resolved) addMessage('ai',`🏷️ ENS 解析：<div class="ai-action-card"><h5>域名解析</h5><div class="ai-action-row"><span class="label">域名</span><span class="value">${em[1]}</span></div><div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px">${resolved}</span></div><div class="ai-action-btns"><button class="ai-action-btn confirm" onclick="setAddr('${resolved}');closeModal('addrModal')">🔗 用此地址连接</button></div></div>`);
+        else addMessage('ai',`❌ 无法解析「${em[1]}」`);
         return;
       }
-      removeTyping();
-      addMessage('ai','请提供 ENS 域名，例如：「查询 ENS vitalik.eth」');
-      return;
+      removeTyping();addMessage('ai','格式：查询 ENS vitalik.eth');return;
     }
 
-    // Portfolio analysis
-    if (lower.includes('持仓') || lower.includes('分析') || lower.includes('portfolio')) {
-      if (!currentAddress) { removeTyping(); addMessage('ai','❌ 请先连接以太坊地址（点击右上角 🔗）'); return; }
+    // Portfolio
+    if (lower.includes('持仓')||lower.includes('分析')||lower.includes('portfolio')) {
+      if(!currentAddress){removeTyping();addMessage('ai','❌ 请先连接地址（右上角 🔗）');return;}
       await loadChainData();
-      let total = 0;
-      let rows = '';
-      const entries = [];
-      for (const [sym, bal] of Object.entries(tokenBalances)) {
-        const price = tokenPrices[sym]?.usd || 0;
-        const val = bal * price;
-        total += val;
-        entries.push({sym, bal, price, val});
-      }
-      entries.sort((a,b)=>b.val-a.val);
-      for (const e of entries) {
-        const pct = total > 0 ? ((e.val/total)*100).toFixed(1) : 0;
-        rows += `<div class="ai-action-row"><span class="label">${e.sym}</span><span class="value">$${e.val.toFixed(2)} (${pct}%)</span></div>`;
-      }
+      let total=0;const entries=[];
+      for(const[s,b]of Object.entries(tokenBalances)){const p=tokenPrices[s]?.usd||0;const v=b*p;total+=v;entries.push({s,b,p,v});}
+      entries.sort((a,b)=>b.v-a.v);
+      let rows='';for(const e of entries){const pct=total>0?((e.v/total)*100).toFixed(1):0;rows+=`<div class="ai-action-row"><span class="label">${e.s}</span><span class="value">$${e.v.toFixed(2)} (${pct}%)</span></div>`;}
       removeTyping();
-      addMessage('ai', `📊 链上持仓分析（实时数据）：<div class="ai-action-card">
-        <h5>💼 资产概况</h5>
-        <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px;">${shortAddr(currentAddress)}</span></div>
-        <div class="ai-action-row"><span class="label">总资产</span><span class="value" style="color:var(--accent);">$${total.toFixed(2)}</span></div>
-        ${rows}
-        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
-          🔗 余额来自 Ethereum Mainnet RPC<br>
-          💰 价格来自 CoinGecko API<br>
-          ${entries.length === 1 && entries[0].sym === 'ETH' ? '⚠️ 持仓集中度为 100% ETH，风险较高' : '💡 持仓分布较分散'}
-        </p>
-      </div>`);
+      addMessage('ai',`📊 链上持仓分析：<div class="ai-action-card"><h5>💼 资产概况</h5>
+        <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px">${shortAddr(currentAddress)}</span></div>
+        <div class="ai-action-row"><span class="label">总资产</span><span class="value" style="color:var(--accent)">$${total.toFixed(2)}</span></div>${rows}
+        <p style="font-size:12px;color:var(--text-muted);margin-top:10px">🔗 Ethereum Mainnet RPC + CoinGecko</p></div>`);
       return;
     }
 
-    // ETH balance specific
-    if (lower.includes('eth') && (lower.includes('余额') || lower.includes('balance'))) {
-      if (!currentAddress) { removeTyping(); addMessage('ai','❌ 请先连接以太坊地址（点击右上角 🔗）'); return; }
-      const bal = await withProvider(p => p.getBalance(currentAddress));
-      const ethBal = ethers.utils.formatEther(bal);
-      const price = tokenPrices['ETH']?.usd || 0;
+    // ETH balance
+    if (lower.includes('eth')&&(lower.includes('余额')||lower.includes('balance'))) {
+      if(!currentAddress){removeTyping();addMessage('ai','❌ 请先连接地址');return;}
+      const bal=await withProvider(p=>p.getBalance(currentAddress));
+      const ethBal=ethers.utils.formatEther(bal);
+      const price=tokenPrices['ETH']?.usd||0;
       removeTyping();
-      addMessage('ai', `🔗 链上 ETH 余额：<div class="ai-action-card">
-        <h5>⟠ ETH 余额</h5>
-        <div class="ai-action-row"><span class="label">地址</span><span class="value" style="font-size:11px;">${shortAddr(currentAddress)}</span></div>
-        <div class="ai-action-row"><span class="label">ETH</span><span class="value">${parseFloat(ethBal).toFixed(4)} ETH</span></div>
-        <div class="ai-action-row"><span class="label">≈ USD</span><span class="value" style="color:var(--accent);">$${(parseFloat(ethBal)*price).toFixed(2)}</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">🔗 数据来源：Ethereum Mainnet RPC 链上查询</p>
-      </div>`);
+      addMessage('ai',`🔗 链上 ETH 余额：<div class="ai-action-card"><h5>⟠ ETH</h5>
+        <div class="ai-action-row"><span class="label">余额</span><span class="value">${parseFloat(ethBal).toFixed(4)} ETH</span></div>
+        <div class="ai-action-row"><span class="label">≈ USD</span><span class="value" style="color:var(--accent)">$${(parseFloat(ethBal)*price).toFixed(2)}</span></div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">🔗 Ethereum Mainnet RPC</p></div>`);
       return;
     }
 
     // Fallback
     removeTyping();
-    addMessage('ai', `我理解你说的是「${msg}」。<br><br>🔗 我支持以下<strong>链上真实数据</strong>查询：<br>
-      💰 「查询 ETH 价格」— CoinGecko 实时价格<br>
-      ⛽ 「查询 Gas 费」— 链上实时 Gas<br>
-      📦 「查询区块高度」— 最新区块<br>
-      📤 「构建转账 0.01 ETH 到 0x...」— 生成真实交易<br>
-      ₮ 「查询 USDT 余额」— ERC20 余额<br>
-      🏷️ 「查询 ENS vitalik.eth」— ENS 解析<br>
-      📊 「分析我的持仓」— 链上资产分析<br><br>
-      试试这些指令吧！`);
+    addMessage('ai',`试试这些<strong>链上真实数据</strong>指令：<br>
+      💰 「查询 ETH 价格」· ⛽ 「查询 Gas 费」<br>
+      📦 「查询区块高度」· ₮ 「查询 USDT 余额」<br>
+      🏷️ 「查询 ENS vitalik.eth」· 📊 「分析我的持仓」<br>
+      📤 「构建转账 0.01 ETH 到 0x...」`);
 
   } catch(e) {
     removeTyping();
-    console.error('Command error:', e);
-    addMessage('ai', `❌ 请求出错：${e.message?.slice(0,100) || '未知错误'}<br><br>可能原因：RPC 节点限流或网络问题，请稍后重试。`);
+    console.error('Error:', e);
+    addMessage('ai',`❌ 出错：${e.message?.slice(0,80)||'未知'}<br><br>请稍后重试或刷新页面。`);
   }
 }
 
 function copyTx() {
-  const hex = document.getElementById('unsignedTxHex')?.textContent;
-  if (hex) navigator.clipboard.writeText(hex).then(()=>showToast('📋 未签名交易已复制！'));
+  const h=document.getElementById('unsignedTxHex')?.textContent;
+  if(h) navigator.clipboard.writeText(h).then(()=>showToast('📋 已复制'));
 }
 
-function bindGasItems() {
-  setTimeout(()=>{
-    document.querySelectorAll('.gas-item').forEach(item=>{
-      item.addEventListener('click',function(){ document.querySelectorAll('.gas-item').forEach(i=>i.classList.remove('selected')); this.classList.add('selected'); });
-    });
-  },100);
-}
-
-// Auto-resize
 document.addEventListener('DOMContentLoaded',()=>{
-  const ta=document.getElementById('chatInput');
-  ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
-  // Enter in addr modal
+  document.getElementById('chatInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
   document.getElementById('addrInput').addEventListener('keydown',e=>{if(e.key==='Enter')connectAddress();});
 });
 </script>
